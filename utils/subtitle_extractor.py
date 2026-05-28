@@ -253,10 +253,15 @@ class SubtitleExtractor:
                 # Try alternative field names for the URL
                 file_url = file_info.get("download_url", "")
             if not file_url:
+                # Try response-level URL fields (some APIs return URL at root level)
+                file_url = up_json.get("url", "") or up_json.get("download_url", "")
+            if not file_url:
                 fid = file_info.get("file_id", "") or file_info.get("id", "")
                 if fid:
                     # Only use fileid:// as last resort - some APIs don't support it
-                    file_url = f"fileid://{fid}"
+                    # Try to construct a valid download URL from the file ID
+                    # DashScope international API format
+                    file_url = f"https://dashscope-intl.aliyuncs.com/api/v1/files/{fid}/content"
                 else:
                     raise RuntimeError(f"No file_id or url in response: {up.text}")
             
@@ -391,10 +396,16 @@ class SubtitleExtractor:
                 # Try alternative field names for the URL
                 file_url = file_info.get("download_url", "")
             if not file_url:
+                # Try response-level URL fields (some APIs return URL at root level)
+                file_url = res_json.get("url", "") or res_json.get("download_url", "")
+            if not file_url:
                 fid = file_info.get("file_id", "") or file_info.get("id", "")
                 if fid:
                     # Only use fileid:// as last resort - some APIs don't support it
-                    file_url = f"fileid://{fid}"
+                    # Try to construct a valid download URL from the file ID
+                    # DashScope international API format
+                    region_host = "https://dashscope-intl.aliyuncs.com/api/v1" if region == "intl" else "https://dashscope.aliyuncs.com/api/v1"
+                    file_url = f"{region_host}/files/{fid}/content"
                 else:
                     raise RuntimeError("Upload failed: No URL found")
             print(f"[SubtitleExtractor] Uploaded: {file_url[:60]}...")
