@@ -1,0 +1,46 @@
+# ============================================================
+# 影视解说工具 - Video Commentary Tool
+# ============================================================
+
+# Core
+streamlit>=1.35.0
+python-dotenv>=1.0.0
+
+# Video Processing
+ffmpeg-python>=0.2.0
+opencv-python-headless>=4.9.0
+moviepy==2.1.1
+# Subtitle Extraction
+# Faster-Whisper (local, GPU/CPU)
+faster-whisper>=1.0.0
+
+# OpenAI (Whisper API + GPT)
+openai>=1.30.0
+
+# Google Gemini
+google-genai>=1.0.0
+
+# Alibaba Qwen (uses openai client)
+dashscope>=1.24.6
+# DeepSeek (uses openai client)
+
+# FunASR (Chinese ASR, local GPU/CPU)
+funasr>=1.0.0
+# FunClip (video clipping)
+funclip>=0.1.0
+
+# Text-to-Speech
+edge-tts>=6.1.0
+
+# Audio Processing
+pydub>=0.25.1
+
+# Image Processing
+Pillow>=10.0.0
+
+# Scene Detection
+scenedetect>=0.6.0
+
+# Utilities
+numpy>=1.24.0
+tqdm>=4.66.0

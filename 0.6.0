@@ -1,0 +1,16 @@
+Collecting scenedetect
+  Using cached scenedetect-0.7-py3-none-any.whl.metadata (3.9 kB)
+Requirement already satisfied: click!=8.3.0,~=8.0 in .\venv\Lib\site-packages (from scenedetect) (8.4.1)
+Requirement already satisfied: numpy in .\venv\Lib\site-packages (from scenedetect) (2.4.6)
+Collecting opencv-python (from scenedetect)
+  Using cached opencv_python-4.13.0.92-cp37-abi3-win_amd64.whl.metadata (20 kB)
+Collecting platformdirs (from scenedetect)
+  Using cached platformdirs-4.9.6-py3-none-any.whl.metadata (4.7 kB)
+Requirement already satisfied: tqdm in .\venv\Lib\site-packages (from scenedetect) (4.67.3)
+Requirement already satisfied: colorama in .\venv\Lib\site-packages (from click!=8.3.0,~=8.0->scenedetect) (0.4.6)
+Using cached scenedetect-0.7-py3-none-any.whl (134 kB)
+Using cached opencv_python-4.13.0.92-cp37-abi3-win_amd64.whl (40.2 MB)
+Using cached platformdirs-4.9.6-py3-none-any.whl (21 kB)
+Installing collected packages: platformdirs, opencv-python, scenedetect
+
+Successfully installed opencv-python-4.13.0.92 platformdirs-4.9.6 scenedetect-0.7
