@@ -220,7 +220,8 @@ class SubtitleExtractor:
             raise ValueError("No DashScope API key configured.")
 
         base_url = (self.config.get("base_url") or os.getenv("QWEN_BASE_URL") or "https://dashscope-intl.aliyuncs.com").strip()
-        api_host = base_url.split("/compatible-mode")[0].split("/api")[0]
+        # Remove trailing slashes and extract API host for file upload/transcription endpoints
+        api_host = base_url.strip().strip("/").split("/compatible-mode")[0].split("/api/v1")[0]
         headers = {"Authorization": f"Bearer {api_key}"}
 
         audio_path = Path(self._extract_audio(video_path))
@@ -237,7 +238,7 @@ class SubtitleExtractor:
             
             up_json = up.json()
             # Try multiple possible response structures
-            data_section = up_json.get("data") or up_json.get("output") or {}
+            data_section = up_json.get("data") or up_json.get("output") or up_json or {}
             uploaded_files = data_section.get("uploaded_files", [])
             
             if not uploaded_files:
@@ -245,11 +246,16 @@ class SubtitleExtractor:
             
             file_info = uploaded_files[0]
             
-            # Get the file URL - prefer 'url' field, fallback to constructing fileid
+            # Get the file URL - must use direct HTTPS URL, NOT fileid://
+            # The ASR API requires accessible HTTP URLs, not internal file IDs
             file_url = file_info.get("url", "")
+            if not file_url:
+                # Try alternative field names for the URL
+                file_url = file_info.get("download_url", "")
             if not file_url:
                 fid = file_info.get("file_id", "") or file_info.get("id", "")
                 if fid:
+                    # Only use fileid:// as last resort - some APIs don't support it
                     file_url = f"fileid://{fid}"
                 else:
                     raise RuntimeError(f"No file_id or url in response: {up.text}")
@@ -329,7 +335,8 @@ class SubtitleExtractor:
 
         model = self.config.get("model", "qwen3-asr-flash-filetrans")
         region = self.config.get("region", "intl")
-        base_url = "https://dashscope-intl.aliyuncs.com/api/v1" if region == "intl" else "https://dashscope.aliyuncs.com/api/v1"
+        # Use the correct base URL based on region, ensuring no trailing slashes
+        base_url = ("https://dashscope-intl.aliyuncs.com/api/v1" if region == "intl" else "https://dashscope.aliyuncs.com/api/v1").rstrip("/")
 
         audio_path = Path(self._extract_audio(video_path))
         print(f"[SubtitleExtractor] Audio ready: {audio_path}")
@@ -344,11 +351,19 @@ class SubtitleExtractor:
             if up.status_code != 200:
                 raise RuntimeError(f"Upload failed: {up.status_code} {up.text}")
             res_json = up.json()
-            result_data = res_json.get("data") or res_json.get("output") or {}
-            file_url = result_data.get("uploaded_files", [{}])[0].get("url", "")
+            result_data = res_json.get("data") or res_json.get("output") or res_json or {}
+            file_info = result_data.get("uploaded_files", [{}])[0]
+            
+            # Get the file URL - must use direct HTTPS URL, NOT fileid://
+            # The ASR API requires accessible HTTP URLs, not internal file IDs
+            file_url = file_info.get("url", "")
             if not file_url:
-                fid = result_data.get("uploaded_files", [{}])[0].get("file_id", "")
+                # Try alternative field names for the URL
+                file_url = file_info.get("download_url", "")
+            if not file_url:
+                fid = file_info.get("file_id", "") or file_info.get("id", "")
                 if fid:
+                    # Only use fileid:// as last resort - some APIs don't support it
                     file_url = f"fileid://{fid}"
                 else:
                     raise RuntimeError("Upload failed: No URL found")

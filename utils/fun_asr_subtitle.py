@@ -16,7 +16,7 @@ from loguru import logger
 
 from app.utils import utils
 
-DASHSCOPE_BASE_URL = "https://dashscope.aliyuncs.com"
+DASHSCOPE_BASE_URL = "https://dashscope.aliyuncs.com".strip()
 UPLOAD_POLICY_URL = f"{DASHSCOPE_BASE_URL}/api/v1/uploads"
 TRANSCRIPTION_URL = f"{DASHSCOPE_BASE_URL}/api/v1/services/audio/asr/transcription"
 TASK_URL_TEMPLATE = f"{DASHSCOPE_BASE_URL}/api/v1/tasks/{{task_id}}"
