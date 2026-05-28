@@ -308,8 +308,38 @@ class SubtitleExtractor:
                             })
                     break
                 elif st in ("FAILED", "CANCELED"):
-                    print(f"[SubtitleExtractor] Task {st}: {pd.get('output', {}).get('message', '')}")
-                    break
+                    msg = pd.get('output', {}).get('message', '')
+                    print(f"[SubtitleExtractor] Task {st}: {msg}")
+                    # Don't break immediately - check if there are any partial results first
+                    # Some ASR services return partial results even on failure (e.g., FILE_DOWNLOAD_FAILED)
+                    for ri in pd.get("output", {}).get("results", []):
+                        tu = ri.get("transcription_url", "") or ri.get("result_url", "")
+                        if not tu:
+                            continue
+                        try:
+                            jr = _req.get(tu, timeout=60)
+                            if jr.status_code != 200:
+                                continue
+                            jd = jr.json()
+                            items = jd.get("transcripts") or jd.get("sentences") or []
+                            for s in items:
+                                text = s.get("text", "").strip()
+                                if not text:
+                                    continue
+                                begin_ms = float(s.get("begin_time") or s.get("start_time", 0))
+                                end_ms = float(s.get("end_time", 0))
+                                subtitles.append({
+                                    "text": text,
+                                    "start": round(begin_ms / 1000.0, 2),
+                                    "end": round(end_ms / 1000.0, 2),
+                                })
+                        except Exception:
+                            pass
+                    if subtitles:
+                        print(f"[SubtitleExtractor] Extracted {len(subtitles)} segments (partial)")
+                        return subtitles
+                    # If still no subtitles, raise error with message instead of returning placeholder
+                    raise RuntimeError(f"ASR task failed: {msg}")
 
             if not subtitles:
                 subtitles.append({"text": "（ASR 未返回结果）", "start": 0, "end": 0})
@@ -429,7 +459,38 @@ class SubtitleExtractor:
                     print(f"[SubtitleExtractor] Extracted {len(subtitles)} segments")
                     return subtitles
                 elif st in ("FAILED", "CANCELED", "UNKNOWN"):
-                    raise RuntimeError(f"Task {st}: {sd.get('output', {}).get('message', '')}")
+                    msg = sd.get('output', {}).get('message', '')
+                    print(f"[SubtitleExtractor] Task {st}: {msg}")
+                    # Check for partial results even on failure (e.g., FILE_DOWNLOAD_FAILED may still have partial results)
+                    results = sd.get("output", {}).get("results", [])
+                    tu = None
+                    if results:
+                        tu = results[0].get("transcription_url") or results[0].get("result_url")
+                    if not tu:
+                        result_section = sd.get("output", {}).get("result", {})
+                        tu = result_section.get("transcription_url") or result_section.get("result_url")
+                    if tu:
+                        try:
+                            jr = _req.get(tu, timeout=60)
+                            if jr.status_code == 200:
+                                jd = jr.json()
+                                items = jd.get("transcripts") or jd.get("sentences") or []
+                                for s in items:
+                                    text = s.get("text", "").strip()
+                                    if not text:
+                                        continue
+                                    begin_ms = float(s.get("begin_time") or s.get("start_time", 0))
+                                    end_ms = float(s.get("end_time", 0))
+                                    entry = {"text": text, "start": round(begin_ms / 1000.0, 2), "end": round(end_ms / 1000.0, 2)}
+                                    if "speaker_id" in s:
+                                        entry["speaker"] = f"Speaker_{s['speaker_id']}"
+                                    subtitles.append(entry)
+                        except Exception:
+                            pass
+                    if subtitles:
+                        print(f"[SubtitleExtractor] Extracted {len(subtitles)} segments (partial)")
+                        return subtitles
+                    raise RuntimeError(f"Task {st}: {msg}")
 
             raise RuntimeError("Task polling timed out")
         except Exception as e:
