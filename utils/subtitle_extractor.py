@@ -234,11 +234,27 @@ class SubtitleExtractor:
                                files={"file": ("audio.wav", f, "audio/wav")}, timeout=300)
             if up.status_code != 200:
                 raise RuntimeError(f"Upload failed: {up.status_code} {up.text}")
-            fid = up.json().get("data", {}).get("uploaded_files", [{}])[0].get("file_id", "")
-            if not fid:
-                raise RuntimeError(f"No file_id: {up.text}")
-            file_url = f"fileid://{fid}"
-            print(f"[SubtitleExtractor] Uploaded, fileid={fid}")
+            
+            up_json = up.json()
+            # Try multiple possible response structures
+            data_section = up_json.get("data") or up_json.get("output") or {}
+            uploaded_files = data_section.get("uploaded_files", [])
+            
+            if not uploaded_files:
+                raise RuntimeError(f"No uploaded_files in response: {up.text}")
+            
+            file_info = uploaded_files[0]
+            
+            # Get the file URL - prefer 'url' field, fallback to constructing fileid
+            file_url = file_info.get("url", "")
+            if not file_url:
+                fid = file_info.get("file_id", "") or file_info.get("id", "")
+                if fid:
+                    file_url = f"fileid://{fid}"
+                else:
+                    raise RuntimeError(f"No file_id or url in response: {up.text}")
+            
+            print(f"[SubtitleExtractor] Uploaded, file_url={file_url[:80]}...")
 
             # 2. Submit transcription (must use async mode — synchronous not supported)
             print(f"[SubtitleExtractor] Submitting {model} transcription...")
