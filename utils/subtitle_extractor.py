@@ -248,13 +248,17 @@ class SubtitleExtractor:
             
             # Get the file URL - must use direct HTTPS URL, NOT fileid://
             # The ASR API requires accessible HTTP URLs, not internal file IDs
+            # Priority order: url > download_url > oss_url > constructed URL
             file_url = file_info.get("url", "")
             if not file_url:
                 # Try alternative field names for the URL
                 file_url = file_info.get("download_url", "")
             if not file_url:
+                # Try OSS URL directly (some responses include the full OSS path)
+                file_url = file_info.get("oss_url", "")
+            if not file_url:
                 # Try response-level URL fields (some APIs return URL at root level)
-                file_url = up_json.get("url", "") or up_json.get("download_url", "")
+                file_url = up_json.get("url", "") or up_json.get("download_url", "") or up_json.get("oss_url", "")
             if not file_url:
                 fid = file_info.get("file_id", "") or file_info.get("id", "")
                 if fid:
@@ -270,7 +274,7 @@ class SubtitleExtractor:
             # 2. Submit transcription (must use async mode — synchronous not supported)
             print(f"[SubtitleExtractor] Submitting {model} transcription...")
             task = _req.post(f"{api_host}/api/v1/services/audio/asr/transcription",
-                             headers={**headers, "Content-Type": "application/json", "X-DashScope-Async": "enable"},
+                             headers={**headers, "Content-Type": "application/json", "X-DashScope-Async": "enable", "X-DashScope-OssResourceResolve": "enable"},
                              json={"model": model, "input": {"file_urls": [file_url]}}, timeout=60)
             if task.status_code != 200:
                 raise RuntimeError(f"Submit failed: {task.status_code} {task.text}")
@@ -391,19 +395,22 @@ class SubtitleExtractor:
             
             # Get the file URL - must use direct HTTPS URL, NOT fileid://
             # The ASR API requires accessible HTTP URLs, not internal file IDs
+            # Priority order: url > download_url > oss_url > constructed URL
             file_url = file_info.get("url", "")
             if not file_url:
                 # Try alternative field names for the URL
                 file_url = file_info.get("download_url", "")
             if not file_url:
+                # Try OSS URL directly (some responses include the full OSS path)
+                file_url = file_info.get("oss_url", "")
+            if not file_url:
                 # Try response-level URL fields (some APIs return URL at root level)
-                file_url = res_json.get("url", "") or res_json.get("download_url", "")
+                file_url = res_json.get("url", "") or res_json.get("download_url", "") or res_json.get("oss_url", "")
             if not file_url:
                 fid = file_info.get("file_id", "") or file_info.get("id", "")
                 if fid:
                     # Only use fileid:// as last resort - some APIs don't support it
                     # Try to construct a valid download URL from the file ID
-                    # DashScope international API format
                     region_host = "https://dashscope-intl.aliyuncs.com/api/v1" if region == "intl" else "https://dashscope.aliyuncs.com/api/v1"
                     file_url = f"{region_host}/files/{fid}/content"
                 else:
@@ -412,7 +419,7 @@ class SubtitleExtractor:
 
             # Submit async task
             submit_url = f"{base_url}/services/audio/asr/transcription"
-            async_headers = {**headers, "Content-Type": "application/json", "X-DashScope-Async": "enable"}
+            async_headers = {**headers, "Content-Type": "application/json", "X-DashScope-Async": "enable", "X-DashScope-OssResourceResolve": "enable"}
             payload = {
                 "model": model,
                 "input": {"file_urls": [file_url]},
