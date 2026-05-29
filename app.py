@@ -347,18 +347,30 @@ def render_cancel_button(description: str = "当前任务"):
 # ============================================================
 # Pages / Steps definition
 # ============================================================
-# 正确流程:
-# 1. Upload → 2. Subtitles → 3. Scenes (场景检测)
-# → 4. Visual (画面分析) → 5. Script (逐场景解说)
-# → 6. Audio → 7. Export
+# 五阶段正确流程 (Five-Phase Workflow):
+# 第一阶段：输入数据准备（Input Preparation）
+#   - Merge Videos（视频合并）→ Extract Audio（提取音频）
+# 第二阶段：原始音频与文本处理（Audio/Text Processing）
+#   - Transcribe Subtitles（生成字幕）→ Review Subtitles（审核字幕）
+# 第三阶段：视觉分析（Visual Analysis）
+#   - Generate Timeline Images（生成时间轴图像）
+#   - Analyze Timeline Images（分析时间轴图像）
+#   - Evaluate Visual Segments（评估视觉片段）
+# 第四阶段：内容理解与生成（Understanding & Generation）
+#   - Narrative Understanding（剧情理解）
+#   - Merge Video Context（融合视频上下文）
+#   - Generate Narration Script（生成解说文案）
+#   - Generate Voiceover（生成配音）
+# 第五阶段：最终制作与发布（Finalization）
+#   - Compose Final Video（合成最终视频）→ Apply to Project（应用到项目）
 STEPS = [
-    ("upload",    "📁", "上传视频"),
-    ("subtitles", "🎤", "音频/字幕提取"),
-    ("scenes",    "🎞️", "场景检测"),
-    ("visual",    "👁️", "画面分析"),
-    ("script",    "✍️", "解说脚本"),
-    ("audio",     "🔊", "配音生成"),
-    ("export",    "🎬", "导出视频"),
+    ("upload",    "📁", "上传视频"),        # 第一阶段：输入数据准备
+    ("subtitles", "🎤", "音频/字幕提取"),    # 第二阶段：原始音频与文本处理
+    ("visual",    "👁️", "画面分析"),        # 第三阶段：视觉分析（先生成和分析时间轴图像）
+    ("scenes",    "🎞️", "场景检测"),        # 第三阶段：视觉分析（评估视觉片段）
+    ("script",    "✍️", "解说脚本"),        # 第四阶段：内容理解与生成
+    ("audio",     "🔊", "配音生成"),        # 第四阶段：内容理解与生成
+    ("export",    "🎬", "导出视频"),        # 第五阶段：最终制作与发布
 ]
 
 STEP_NAMES = {s[0]: s[2] for s in STEPS}
@@ -1067,10 +1079,8 @@ def render_subtitles_page():
 
 
 # ============================================================
-# Step Page: Frames
 # ============================================================
-# ============================================================
-# Step Page: Scene Detection (新: 1. 场景检测)
+# Step Page: Scene Detection (第三阶段：视觉分析 - 评估视觉片段)
 # ============================================================
 def render_scenes_page():
     st.title(f"🎞️ 场景检测")
@@ -1086,7 +1096,7 @@ def render_scenes_page():
         return
 
     if not st.session_state.subtitles:
-        st.warning("⚠️ 请先在「字幕提取」步骤提取字幕")
+        st.warning("⚠️ 请先在「音频/字幕提取」步骤提取字幕")
         return
 
     # Config options
